@@ -12,9 +12,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 import pytorch_lightning as pl
-# from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-# import wandb 
+import wandb 
 from torchvision.utils import save_image
 import numpy as np
 import matplotlib.pyplot as plt
@@ -128,9 +128,9 @@ class ConditionalDiffusionModel(pl.LightningModule):
         device = self.device
         model = self.model
         diffusion = self.diffusion
-        n = 8  # 샘플링할 이미지 수
-        y = torch.Tensor([6] * n).long().to(device)  # 레이블 설정
-        x = diffusion.sample(model, n, y, cfg_scale=0)
+        n = 4  # 샘플링할 이미지 수
+        y = torch.Tensor([1] * n).long().to(device)  # 레이블 설정
+        x = diffusion.sample(model, n, y, cfg_scale=3)
         return x
 
 
@@ -155,17 +155,42 @@ class ConditionalDiffusionModel(pl.LightningModule):
         
         
             # wandb에 이미지 그리드 로깅
-        # self.logger.experiment.log({"sampled_images": [wandb.Image(grid)]})
+        self.logger.experiment.log({"sampled_images": [wandb.Image(grid)]})
             
     
     def on_train_end(self):
-        torch.save(self.ema_model.state_dict(), "/media/hy/nwxxk/Diffusion-Models-pytorch-my/ema/ema_model.pt")
+        torch.save(self.ema_model.state_dict(), "/media/hy/nwxxk/NeurIPS/DDPM-CIFAR/ema/cat_ema_model.pt")
 
 
 
 
 
+import os
+import glob
 
+class SaveBestEMAModelCallback(pl.Callback):
+    def __init__(self, save_dir):
+        super().__init__()
+        self.save_dir = save_dir
+        self.best_val_loss = float('inf')
+        self.best_model_path = None
+
+    def on_validation_end(self, trainer, pl_module):
+        current_val_loss = trainer.callback_metrics["val_loss"].item()
+        
+        if current_val_loss < self.best_val_loss:
+            # 이전 최고 성능 모델 삭제
+            if self.best_model_path and os.path.exists(self.best_model_path):
+                os.remove(self.best_model_path)
+                print(f"Removed previous best model: {self.best_model_path}")
+
+            self.best_val_loss = current_val_loss
+            self.best_model_path = os.path.join(self.save_dir, f"best_ema_model_valloss{current_val_loss:.4f}.pt")
+            
+            # 새로운 최고 성능 모델 저장
+            torch.save(pl_module.ema_model.state_dict(), self.best_model_path)
+            print("🎠" * 40)
+            print(f"New best model! Saved EMA model to {self.best_model_path}")
 
 
 
@@ -175,12 +200,12 @@ def launch():
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     args.run_name = "DDPM_conditional"
-    args.epochs = 100
+    args.epochs = 300
     args.batch_size = 8
-    args.image_size = 32
-    args.num_classes = 10
-    # args.dataset_path = r"./datasets/Landscape_classifier_02/training"
-    # args.val_dataset_path = r"./datasets/Landscape_classifier_02/testing"
+    args.image_size = 64
+    args.num_classes = 2
+    args.dataset_path = "/media/hy/nwxxk/NeurIPS/DDPM-CIFAR/datasets/dogcat/train"
+    args.val_dataset_path = "/media/hy/nwxxk/NeurIPS/DDPM-CIFAR/datasets/dogcat/test"
     args.device = "cuda"
     args.num_workers = 31
     args.lr = 3e-4
@@ -192,7 +217,10 @@ def main(args):
     model = ConditionalDiffusionModel(args)
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     # logger = TensorBoardLogger("tb_logs", name="my_model")
-    # logger = WandbLogger(name=now, project="my_project")
+    logger = WandbLogger(name=now, project="Neurips2024")
+    
+    save_dir = os.path.join('checkpoints', now)
+    os.makedirs(save_dir, exist_ok=True)
 
     
     
@@ -204,12 +232,15 @@ def main(args):
         verbose=True,
         monitor="val_loss",
         mode="min")
-    
+            
+    save_best_ema_callback = SaveBestEMAModelCallback(save_dir)
+
     trainer = pl.Trainer(
         max_epochs=args.epochs,
-        devices=1,  # GPU 사용 설정 (0은 GPU 사용 안함)
-        # logger=logger,
-        callbacks=[checkpoint_callback])
+        devices=1,
+        logger=logger,
+        callbacks=[checkpoint_callback, save_best_ema_callback]  # 두 콜백을 모두 추가
+    )
 
     trainer.fit(model)
 

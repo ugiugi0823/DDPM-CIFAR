@@ -1,1 +1,2 @@
+export CUDA_LAUNCH_BLOCKING=1
 CUDA_VISIBLE_DEVICES=0 python ddpm_cond_pl.py

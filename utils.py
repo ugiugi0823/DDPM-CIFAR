@@ -25,29 +25,34 @@ def save_images(images, path, **kwargs):
 
 def val_get_data(args):
     transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(40),  # args.image_size + 1/4 *args.image_size
+        torchvision.transforms.Resize(80),  # args.image_size + 1/4 *args.image_size
         torchvision.transforms.RandomResizedCrop(args.image_size, scale=(0.8, 1.0)),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    # dataset = torchvision.datasets.ImageFolder(args.val_dataset_path, transform=transforms)
-    dataset = torchvision.datasets.CIFAR10(root="./data", train=False, transform=transforms, download=False)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    dataset = torchvision.datasets.ImageFolder(args.val_dataset_path, transform=transforms)
+    dataloader = DataLoader(dataset, 
+                            batch_size=args.batch_size,
+                            num_workers=args.num_workers, 
+                            shuffle=False)
     return dataloader
+
 
 
 
 
 def get_data(args):
     transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(40),  # args.image_size + 1/4 *args.image_size
+        torchvision.transforms.Resize(80),  # args.image_size + 1/4 *args.image_size
         torchvision.transforms.RandomResizedCrop(args.image_size, scale=(0.8, 1.0)),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    # dataset = torchvision.datasets.ImageFolder(args.dataset_path, transform=transforms)
-    dataset = torchvision.datasets.CIFAR10(root="./data", train=True, transform=transforms, download=False)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    dataset = torchvision.datasets.ImageFolder(args.dataset_path, transform=transforms)
+    dataloader = DataLoader(dataset, 
+                            batch_size=args.batch_size,
+                            num_workers=args.num_workers, 
+                            shuffle=True)
     return dataloader
 
 

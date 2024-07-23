@@ -14,3 +14,13 @@ __pycache__/
 
 # 체크포인트 폴더 무시
 /checkpoints/
+
+/wxxk/
+/cifar/
+/ema/
+
+
+/gg.py
+/dd.py
+/wxxk_conditional_ema.pt
+/utils copy.py
