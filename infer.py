@@ -10,7 +10,7 @@ for i in range(10):
     num_img = 1 # 몇개 생성
     class_num = 2 # 생성할 클래스 번호
     device = "cuda"
-    ckpt = torch.load("/media/hy/nwxxk/NeurIPS/DDPM-CIFAR/wxxk_conditional_ema.pt")
+    ckpt = torch.load("./wxxk_conditional_ema.pt")
     model = UNet_conditional(num_classes=10).to(device)
     model.load_state_dict(ckpt)
     diffusion = Diffusion(noise_steps=1000, img_size=64, device=device)
